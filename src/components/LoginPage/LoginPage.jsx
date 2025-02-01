@@ -32,8 +32,9 @@ const LoginPage = () => {
 
     // Dummy validation check: replace with your actual login logic
     if (formData.email && formData.password) {
-      localStorage.setItem('isLoggedIn', true);  // Set the login status in localStorage
-      window.location.href = 'https://churnit-6gkeemgqfij24fdahgdny2.streamlit.app/'; // Redirect to the external website
+      localStorage.setItem('isLoggedIn', true);  
+      // Set the login status in localStorage
+      window.location.href = 'http://127.0.0.1:5000'; // Redirect to the external website
     } else {
       alert('Please enter valid credentials');
     }
@@ -85,9 +86,12 @@ const LoginPage = () => {
                 />
               </div>
             )}
-            <button type="submit" className="submit-btn">
-              {isLogin ? 'Login' : 'Register'}
+        
+            <button type="submit" className="submit-btn" >
+              {isLogin ? 'Login' : 'Register'
+              }
             </button>
+         
           </form>
           <p className="toggle-form">
             {isLogin ? "Don't have an account? " : "Already have an account? "}
