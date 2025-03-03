@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Customer Churn Predictor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --card-bg: rgba(255, 255, 255, 0.1);
+            --card-hover-bg: rgba(255, 255, 255, 0.15);
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: var(--light-color);
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .main-container {
+            height: 92vh;
+            overflow-y: auto;
+            padding: 2rem;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-color) var(--primary-color);
+        }
+
+        .main-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .main-container::-webkit-scrollbar-track {
+            background: var(--primary-color);
+        }
+
+        .main-container::-webkit-scrollbar-thumb {
+            background-color: var(--accent-color);
+            border-radius: 4px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            margin-bottom: 2rem;
+        }
+
+        .card-title {
+            color: var(--light-color);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            color: var(--light-color);
+            font-weight: 500;
+        }
+
+        .form-control, .form-select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--light-color);
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.25rem rgba(231, 76, 60, 0.25);
+            color: var(--light-color);
+        }
+
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .form-select option {
+            background: var(--primary-color);
+            color: var(--light-color);
+        }
+
+        .section-header {
+            color: var(--accent-color);
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-header i {
+            margin-right: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid var(--light-color);
+            color: var(--light-color);
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--light-color);
+            color: var(--primary-color);
+        }
+
+        .prediction-result {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(44, 62, 80, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            transform: translateY(100%);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+        }
+
+        .prediction-result.show {
+            transform: translateY(0);
+            display: block;
+        }
+
+        .prediction-result .card {
+            margin-bottom: 0;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--accent-color);
+            border-radius: 4px;
+            transition: width 1s ease-in-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-group {
+            animation: slideIn 0.5s ease-out forwards;
+            opacity: 0;
+        }
+
+        .form-group:nth-child(n) {
+            animation-delay: calc(n * 0.1s);
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1 class="animate__animated animate__fadeInDown mb-4">Customer Churn Predictor</h1>
+        
+        {% if error and error == "Model not found. Please train the model first." %}
+            <div class="alert alert-danger animate__animated animate__fadeIn mb-4" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <h4 class="alert-heading mb-0">Model Not Trained</h4>
+                </div>
+                <hr>
+                <p>The churn prediction model has not been trained yet. Please train the model before making predictions.</p>
+                <form method="POST" action="{{ url_for('train_models') }}" class="mt-3">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-cogs me-2"></i>Train Model Now
+                    </button>
+                </form>
+            </div>
+        {% elif error %}
+            <div class="alert alert-danger animate__animated animate__fadeIn" role="alert">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <div class="card animate__animated animate__fadeIn">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-user-circle me-2"></i>Customer Information</h5>
+                <form method="POST" action="{{ url_for('predict') }}" id="predictionForm">
+                    <!-- Demographics Section -->
+                    <div class="row mb-4">
+                        <h6 class="section-header"><i class="fas fa-users"></i>Demographics</h6>
+                        <div class="col-md-3 mb-3">
+                            <label for="gender" class="form-label">Gender</label>
+                            <select class="form-select" id="gender" name="gender" required>
+                                <option value="">Select...</option>
+                                <option value="Female">Female</option>
+                                <option value="Male">Male</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="SeniorCitizen" class="form-label">Senior Citizen</label>
+                            <select class="form-select" id="SeniorCitizen" name="SeniorCitizen" required>
+                                <option value="">Select...</option>
+                                <option value="0">No</option>
+                                <option value="1">Yes</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="Partner" class="form-label">Partner</label>
+                            <select class="form-select" id="Partner" name="Partner" required>
+                                <option value="">Select...</option>
+                                <option value="No">No</option>
+                                <option value="Yes">Yes</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="Dependents" class="form-label">Dependents</label>
+                            <select class="form-select" id="Dependents" name="Dependents" required>
+                                <option value="">Select...</option>
+                                <option value="No">No</option>
+                                <option value="Yes">Yes</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Phone Services Section -->
+                    <div class="row mb-4">
+                        <h6 class="section-header"><i class="fas fa-phone"></i>Phone Services</h6>
+                        <div class="col-md-4 mb-3">
+                            <label for="PhoneService" class="form-label">Phone Service</label>
+                            <select class="form-select" id="PhoneService" name="PhoneService" required>
+                                <option value="">Select...</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="MultipleLines" class="form-label">Multiple Lines</label>
+                            <select class="form-select" id="MultipleLines" name="MultipleLines" required>
+                                <option value="">Select...</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                                <option value="No phone service">No phone service</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Internet Services Section -->
+                    <div class="row mb-4">
+                        <h6 class="section-header"><i class="fas fa-wifi"></i>Internet Services</h6>
+                        <div class="col-md-4 mb-3">
+                            <label for="InternetService" class="form-label">Internet Service</label>
+                            <select class="form-select" id="InternetService" name="InternetService" required>
+                                <option value="">Select...</option>
+                                <option value="DSL">DSL</option>
+                                <option value="Fiber optic">Fiber optic</option>
+                                <option value="No">No</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="OnlineSecurity" class="form-label">Online Security</label>
+                            <select class="form-select" id="OnlineSecurity" name="OnlineSecurity" required>
+                                <option value="">Select...</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                                <option value="No internet service">No internet service</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="OnlineBackup" class="form-label">Online Backup</label>
+                            <select class="form-select" id="OnlineBackup" name="OnlineBackup" required>
+                                <option value="">Select...</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                                <option value="No internet service">No internet service</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Additional Services Section -->
+                    <div class="row mb-4">
+                        <h6 class="section-header"><i class="fas fa-shield-alt"></i>Additional Services</h6>
+                        <div class="col-md-3 mb-3">
+                            <label for="DeviceProtection" class="form-label">Device Protection</label>
+                            <select class="form-select" id="DeviceProtection" name="DeviceProtection" required>
+                                <option value="">Select...</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                                <option value="No internet service">No internet service</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="TechSupport" class="form-label">Tech Support</label>
+                            <select class="form-select" id="TechSupport" name="TechSupport" required>
+                                <option value="">Select...</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                                <option value="No internet service">No internet service</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="StreamingTV" class="form-label">Streaming TV</label>
+                            <select class="form-select" id="StreamingTV" name="StreamingTV" required>
+                                <option value="">Select...</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                                <option value="No internet service">No internet service</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="StreamingMovies" class="form-label">Streaming Movies</label>
+                            <select class="form-select" id="StreamingMovies" name="StreamingMovies" required>
+                                <option value="">Select...</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                                <option value="No internet service">No internet service</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Contract & Billing Section -->
+                    <div class="row mb-4">
+                        <h6 class="section-header"><i class="fas fa-file-invoice"></i>Contract & Billing</h6>
+                        <div class="col-md-4 mb-3">
+                            <label for="Contract" class="form-label">Contract Type</label>
+                            <select class="form-select" id="Contract" name="Contract" required>
+                                <option value="">Select...</option>
+                                <option value="Month-to-month">Month-to-month</option>
+                                <option value="One year">One year</option>
+                                <option value="Two year">Two year</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="PaperlessBilling" class="form-label">Paperless Billing</label>
+                            <select class="form-select" id="PaperlessBilling" name="PaperlessBilling" required>
+                                <option value="">Select...</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="PaymentMethod" class="form-label">Payment Method</label>
+                            <select class="form-select" id="PaymentMethod" name="PaymentMethod" required>
+                                <option value="">Select...</option>
+                                <option value="Electronic check">Electronic check</option>
+                                <option value="Mailed check">Mailed check</option>
+                                <option value="Bank transfer (automatic)">Bank transfer (automatic)</option>
+                                <option value="Credit card (automatic)">Credit card (automatic)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Financial Information -->
+                    <div class="row mb-4">
+                        <h6 class="section-header"><i class="fas fa-dollar-sign"></i>Financial Information</h6>
+                        <div class="col-md-4 mb-3">
+                            <label for="tenure" class="form-label">Tenure (months)</label>
+                            <input type="number" class="form-control" id="tenure" name="tenure" min="0" required>
+                            <div class="form-text">Number of months as a customer</div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="MonthlyCharges" class="form-label">Monthly Charges ($)</label>
+                            <input type="number" step="0.01" class="form-control" id="MonthlyCharges" name="MonthlyCharges" min="0" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="TotalCharges" class="form-label">Total Charges ($)</label>
+                            <input type="number" step="0.01" class="form-control" id="TotalCharges" name="TotalCharges" min="0" required>
+                        </div>
+                    </div>
+
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-magic me-2"></i>Predict Churn Probability
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="prediction-result" id="predictionResult">
+        {% if prediction is not none %}
+        <div class="card">
+            <div class="card-body text-center">
+                <h4 class="mb-4">Prediction Result</h4>
+                <div class="progress mb-3">
+                    <div class="progress-bar" role="progressbar" style="width: {{ probability * 100 }}%"></div>
+                </div>
+                <p class="h5 mb-3">Churn Probability: {{ "%.2f"|format(probability * 100) if probability is not none else 'N/A' }}%</p>
+                <p class="h6">Prediction: 
+                    <span class="badge {% if prediction == 1 %}bg-danger{% else %}bg-success{% endif %}">
+                        {% if prediction == 1 %}Likely to Churn{% else %}Likely to Stay{% endif %}
+                    </span>
+                </p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Existing form field dependencies code remains the same
+
+            // Show prediction result when form is submitted
+            const form = document.getElementById('predictionForm');
+            const predictionResult = document.getElementById('predictionResult');
+
+            if (predictionResult.innerHTML.trim()) {
+                setTimeout(() => {
+                    predictionResult.classList.add('show');
+                }, 500);
+            }
+
+            form.addEventListener('submit', () => {
+                predictionResult.classList.add('show');
+            });
+        });
+    </script>
+
+        <div class="mt-4">
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
+        </div>
+    </div>
+
+    <script>
+        // Form field dependencies
+        document.addEventListener('DOMContentLoaded', function() {
+            const internetService = document.getElementById('InternetService');
+            const internetDependentFields = [
+                'OnlineSecurity',
+                'OnlineBackup',
+                'DeviceProtection',
+                'TechSupport',
+                'StreamingTV',
+                'StreamingMovies'
+            ];
+
+            const phoneService = document.getElementById('PhoneService');
+            const multipleLines = document.getElementById('MultipleLines');
+
+            // Handle Internet Service dependencies
+            internetService.addEventListener('change', function() {
+                const noService = this.value === "No";
+                internetDependentFields.forEach(fieldId => {
+                    const field = document.getElementById(fieldId);
+                    if (noService) {
+                        field.value = "No internet service";
+                        field.disabled = true;
+                    } else {
+                        field.disabled = false;
+                    }
+                });
+            });
+
+            // Handle Phone Service dependencies
+            phoneService.addEventListener('change', function() {
+                const noService = this.value === "No";
+                if (noService) {
+                    multipleLines.value = "No phone service";
+                    multipleLines.disabled = true;
+                } else {
+                    multipleLines.disabled = false;
+                }
+            });
+
+            // Handle Monthly Charges and Total Charges calculation
+            const monthlyCharges = document.getElementById('MonthlyCharges');
+            const tenure = document.getElementById('tenure');
+            const totalCharges = document.getElementById('TotalCharges');
+
+            function updateTotalCharges() {
+                if (monthlyCharges.value && tenure.value) {
+                    totalCharges.value = (parseFloat(monthlyCharges.value) * parseInt(tenure.value)).toFixed(2);
+                }
+            }
+
+            monthlyCharges.addEventListener('input', updateTotalCharges);
+            tenure.addEventListener('input', updateTotalCharges);
+        });
+    </script>
+</body>
+</html>
