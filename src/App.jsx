@@ -11,6 +11,7 @@ import Testimonials from './components/Testimonials/Testimonials';
 import Contact from './components/Contact/Contact';
 import Footer from './components/Footer/Footer';
 import LoginPage from './components/LoginPage/LoginPage';
+import AuthPage from './components/AuthPage/AuthPage';
 
 const App = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
